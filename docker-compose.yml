@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./vpnbot
+    container_name: vpn-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./vpnbot/.env
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    volumes:
+      - ./vpnbot:/app  
+    networks:
+      - vpn-network
+
+
+  bot:  # Aiogram бот
+    build:
+      context: ./vpn-bot
+    container_name: vpn-bot
+    depends_on:
+      - backend
+    env_file:
+      - ./vpn-bot/.env
+    networks:
+      - vpn-network
+
+networks:
+  vpn-network:
