@@ -4,19 +4,20 @@ services:
   backend:
     build:
       context: ./vpnbot
-    container_name: vpn-backend
+    container_name: vpn-backend  
     ports:
       - "8000:8000"
     env_file:
       - ./vpnbot/.env
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     volumes:
-      - ./vpnbot:/app  
+      - ./vpnbot:/app
+    depends_on:
+      - redis
     networks:
       - vpn-network
 
-
-  bot:  # Aiogram бот
+  bot:
     build:
       context: ./vpn-bot
     container_name: vpn-bot
@@ -24,6 +25,29 @@ services:
       - backend
     env_file:
       - ./vpn-bot/.env
+    networks:
+      - vpn-network
+
+  celery:
+    build:
+      context: ./vpnbot
+    container_name: vpn-celery
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - ./vpnbot:/app
+    env_file:
+      - ./vpnbot/.env
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - vpn-network
+
+  redis:
+    image: redis:7
+    container_name: vpn-redis
+    ports:
+      - "6379:6379"
     networks:
       - vpn-network
 
