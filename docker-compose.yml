@@ -1,6 +1,7 @@
-version: '3.8'
+version: "3.9"
 
 services:
+  # Backend (Django)
   backend:
     build:
       context: ./vpnbot
@@ -17,7 +18,8 @@ services:
     networks:
       - vpn-network
 
-  bot:
+  # Telegram Bot (VPN)
+  vpn_bot:
     build:
       context: ./vpn-bot
     container_name: vpn-bot
@@ -28,6 +30,7 @@ services:
     networks:
       - vpn-network
 
+  # Celery Worker
   celery:
     build:
       context: ./vpnbot
@@ -43,6 +46,7 @@ services:
     networks:
       - vpn-network
 
+  # Redis
   redis:
     image: redis:7
     container_name: vpn-redis
@@ -50,6 +54,57 @@ services:
       - "6379:6379"
     networks:
       - vpn-network
+
+  # База данных для support_tg_bot и tg_stars
+  postgres:
+    image: postgres:15
+    container_name: support-tg-db
+    environment:
+      POSTGRES_USER: support_bot_user
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: support_bot_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - vpn-network
+
+  # Support Bot
+  support_bot:
+    build:
+      context: ./support_tg_bot
+    container_name: support-tg-bot
+    depends_on:
+      - postgres
+    environment:
+      BOT_TOKEN: 8102068730:AAGFLI5vu0rCR_sCH0Y5a8nCjCkubkJ-Mms
+      OWNER_ID: 7622191579
+      DATABASE_USER: support_bot_user
+      DATABASE_PASS: yourpassword
+      DATABASE_HOST: postgres
+      DATABASE_NAME: support_bot_db
+    networks:
+      - vpn-network
+
+  # Stars Payment Bot
+  tg_stars:
+    build:
+      context: ./tg_stars
+    container_name: stars-tg-bot
+    depends_on:
+      - postgres
+    environment:
+      BOT_TOKEN: 7070730009:AAHcikC3wCb7YTzJGJAYoFLmF0LNLOHEL1g
+      DATABASE_USER: support_bot_user
+      DATABASE_PASS: yourpassword
+      DATABASE_HOST: postgres
+      DATABASE_NAME: support_bot_db
+    networks:
+      - vpn-network
+
+volumes:
+  postgres_data:
 
 networks:
   vpn-network:
