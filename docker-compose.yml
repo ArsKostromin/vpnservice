@@ -1,11 +1,11 @@
 version: "3.9"
 
 services:
-  # Backend (Django)
+  # Django Backend
   backend:
     build:
       context: ./vpnbot
-    container_name: vpn-backend  
+    container_name: vpn-backend
     ports:
       - "8000:8000"
     env_file:
@@ -13,6 +13,9 @@ services:
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     volumes:
       - ./vpnbot:/app
+      - /usr/local/etc/xray/config.json:/usr/local/etc/xray/config.json
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log/squid/access.log:/app/access.log:ro
     depends_on:
       - redis
     networks:
@@ -46,6 +49,22 @@ services:
     networks:
       - vpn-network
 
+  # Celery Beat
+  celery-beat:
+    build:
+      context: ./vpnbot
+    container_name: vpn-celery-beat
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - ./vpnbot:/app
+    env_file:
+      - ./vpnbot/.env
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - vpn-network
+
   # Redis
   redis:
     image: redis:7
@@ -55,7 +74,7 @@ services:
     networks:
       - vpn-network
 
-  # База данных для support_tg_bot и tg_stars
+  # PostgreSQL (для support_bot и tg_stars)
   postgres:
     image: postgres:15
     container_name: support-tg-db
@@ -78,7 +97,7 @@ services:
     depends_on:
       - postgres
     environment:
-      BOT_TOKEN: 8102068730:AAGFLI5vu0rCR_sCH0Y5a8nCjCkubkJ-Mms
+      BOT_TOKEN: 8103428361:AAF4eiar2lpDntM4qEWPiwnCBhiFYxffu0Q
       OWNER_ID: 7622191579
       DATABASE_USER: support_bot_user
       DATABASE_PASS: yourpassword
